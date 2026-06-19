@@ -9,8 +9,12 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<Vulnerability> Vulnerabilities => Set<Vulnerability>();
-    public DbSet<Asset> Assets => Set<Asset>();
-    public DbSet<VulnerabilityAttachment> Attachments => Set<VulnerabilityAttachment>();
+    public DbSet<Team> Teams => Set<Team>();
+    public DbSet<VulnerabilitySource> VulnerabilitySources => Set<VulnerabilitySource>();
+    public DbSet<StatusUpdate> StatusUpdates => Set<StatusUpdate>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<UploadBatch> UploadBatches => Set<UploadBatch>();
+    public DbSet<ScheduledReminder> ScheduledReminders => Set<ScheduledReminder>();
     public DbSet<VulnerabilityComment> Comments => Set<VulnerabilityComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -21,7 +25,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Dispatch domain events before persisting
         var entitiesWithEvents = ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.Entity.DomainEvents.Count != 0)
             .Select(e => e.Entity)

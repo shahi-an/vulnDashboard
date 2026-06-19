@@ -21,12 +21,18 @@ public sealed class VulnerabilitiesController(IMediator mediator) : ControllerBa
         [FromQuery] int pageSize = 25,
         [FromQuery] Severity? severity = null,
         [FromQuery] VulnerabilityStatus? status = null,
-        [FromQuery] Guid? assetId = null,
+        [FromQuery] VulnerabilityType? vulnerabilityType = null,
+        [FromQuery] Guid? teamId = null,
+        [FromQuery] Guid? sourceId = null,
+        [FromQuery] string? assignedToEmail = null,
         [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
         var result = await mediator.Send(
-            new GetVulnerabilitiesQuery(pageNumber, pageSize, severity, status, assetId, search),
+            new GetVulnerabilitiesQuery(
+                pageNumber, pageSize,
+                severity, status, vulnerabilityType,
+                teamId, sourceId, assignedToEmail, search),
             cancellationToken);
 
         return Ok(result);
@@ -50,7 +56,7 @@ public sealed class VulnerabilitiesController(IMediator mediator) : ControllerBa
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        // Placeholder — GetVulnerabilityByIdQuery to be added in subsequent iteration
+        // Placeholder — GetVulnerabilityByIdQuery to be added in a subsequent iteration
         await Task.CompletedTask;
         return Ok(new { id });
     }

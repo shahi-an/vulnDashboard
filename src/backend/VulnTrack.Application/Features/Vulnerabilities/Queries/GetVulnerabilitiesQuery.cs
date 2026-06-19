@@ -6,17 +6,27 @@ namespace VulnTrack.Application.Features.Vulnerabilities.Queries;
 
 public sealed record VulnerabilityListItemDto(
     Guid Id,
-    string Title,
+    string VulnerabilityNumber,
+    string ServerName,
+    string ServerIp,
+    VulnerabilityType VulnerabilityType,
     Severity Severity,
     VulnerabilityStatus Status,
-    string AssetName,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? DueDate);
+    RemediationPriority Priority,
+    string? AssignedToEmail,
+    string? TeamName,
+    string SourceName,
+    DateTimeOffset LastUpdated,
+    DateTimeOffset? FollowUpDue,
+    DateTimeOffset? Ecd);
 
 public sealed record GetVulnerabilitiesQuery(
     int PageNumber = 1,
     int PageSize = 25,
     Severity? Severity = null,
     VulnerabilityStatus? Status = null,
-    Guid? AssetId = null,
+    VulnerabilityType? VulnerabilityType = null,
+    Guid? TeamId = null,
+    Guid? SourceId = null,
+    string? AssignedToEmail = null,
     string? SearchTerm = null) : IRequest<PagedResult<VulnerabilityListItemDto>>;

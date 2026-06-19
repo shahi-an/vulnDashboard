@@ -6,8 +6,12 @@ namespace VulnTrack.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Vulnerability> Vulnerabilities { get; }
-    DbSet<Asset> Assets { get; }
-    DbSet<VulnerabilityAttachment> Attachments { get; }
+    DbSet<Team> Teams { get; }
+    DbSet<VulnerabilitySource> VulnerabilitySources { get; }
+    DbSet<StatusUpdate> StatusUpdates { get; }
+    DbSet<Attachment> Attachments { get; }
+    DbSet<UploadBatch> UploadBatches { get; }
+    DbSet<ScheduledReminder> ScheduledReminders { get; }
     DbSet<VulnerabilityComment> Comments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
