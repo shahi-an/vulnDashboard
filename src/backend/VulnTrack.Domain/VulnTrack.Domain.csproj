@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>VulnTrack.Domain</RootNamespace>
+    <AssemblyName>VulnTrack.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Domain has zero external dependencies by design -->
+
+</Project>
