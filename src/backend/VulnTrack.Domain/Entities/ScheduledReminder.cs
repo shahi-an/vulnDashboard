@@ -10,6 +10,7 @@ namespace VulnTrack.Domain.Entities;
 public sealed class ScheduledReminder : BaseEntity
 {
     public Guid VulnerabilityId { get; private set; }
+    public Vulnerability Vulnerability { get; private set; } = null!;
     public string? RecipientUserId { get; private set; }
     public string RecipientEmail { get; private set; } = string.Empty;
     public DateTimeOffset ScheduledFor { get; private set; }

@@ -1,6 +1,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
+using VulnTrack.Api.Middleware;
 using VulnTrack.Application;
 using VulnTrack.Infrastructure;
 
@@ -89,6 +90,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
