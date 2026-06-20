@@ -3,7 +3,7 @@ import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-reac
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { VulnerabilitiesPage } from './pages/VulnerabilitiesPage';
-import { AssetsPage } from './pages/AssetsPage';
+import { VulnerabilityDetailPage } from './pages/VulnerabilityDetailPage';
 import { AppLayout } from './components/common/AppLayout';
 
 export function App() {
@@ -21,7 +21,7 @@ export function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
-            <Route path="/assets" element={<AssetsPage />} />
+            <Route path="/vulnerabilities/:id" element={<VulnerabilityDetailPage />} />
           </Route>
         </Routes>
       </AuthenticatedTemplate>
