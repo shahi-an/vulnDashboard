@@ -29,4 +29,7 @@ public sealed record GetVulnerabilitiesQuery(
     Guid? TeamId = null,
     Guid? SourceId = null,
     string? AssignedToEmail = null,
-    string? SearchTerm = null) : IRequest<PagedResult<VulnerabilityListItemDto>>;
+    string? SearchTerm = null,
+    DateTimeOffset? CreatedAfter = null,
+    DateTimeOffset? CreatedBefore = null,
+    DateTimeOffset? FollowUpDueBefore = null) : IRequest<PagedResult<VulnerabilityListItemDto>>;

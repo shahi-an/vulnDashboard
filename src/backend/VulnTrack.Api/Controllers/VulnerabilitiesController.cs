@@ -26,13 +26,17 @@ public sealed class VulnerabilitiesController(IMediator mediator) : ControllerBa
         [FromQuery] Guid? sourceId = null,
         [FromQuery] string? assignedToEmail = null,
         [FromQuery] string? search = null,
+        [FromQuery] DateTimeOffset? createdAfter = null,
+        [FromQuery] DateTimeOffset? createdBefore = null,
+        [FromQuery] DateTimeOffset? followUpDueBefore = null,
         CancellationToken cancellationToken = default)
     {
         var result = await mediator.Send(
             new GetVulnerabilitiesQuery(
                 pageNumber, pageSize,
                 severity, status, vulnerabilityType,
-                teamId, sourceId, assignedToEmail, search),
+                teamId, sourceId, assignedToEmail, search,
+                createdAfter, createdBefore, followUpDueBefore),
             cancellationToken);
 
         return Ok(result);

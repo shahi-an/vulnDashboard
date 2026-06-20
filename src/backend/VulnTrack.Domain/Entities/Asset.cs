@@ -38,10 +38,11 @@ public sealed class Asset : AuditableEntity
         };
     }
 
-    public void Update(string name, AssetType type, string? owner, string? environment, string updatedBy)
+    public void Update(string name, AssetType type, string? description, string? owner, string? environment, string updatedBy)
     {
         Name = name;
         Type = type;
+        Description = description;
         Owner = owner;
         Environment = environment;
         UpdatedBy = updatedBy;

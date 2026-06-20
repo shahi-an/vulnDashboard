@@ -48,6 +48,15 @@ internal sealed class GetVulnerabilitiesQueryHandler(IApplicationDbContext dbCon
                 (v.CveId != null && v.CveId.Contains(term)));
         }
 
+        if (request.CreatedAfter.HasValue)
+            filtered = filtered.Where(v => v.CreatedAt >= request.CreatedAfter.Value);
+
+        if (request.CreatedBefore.HasValue)
+            filtered = filtered.Where(v => v.CreatedAt <= request.CreatedBefore.Value);
+
+        if (request.FollowUpDueBefore.HasValue)
+            filtered = filtered.Where(v => v.FollowUpDue.HasValue && v.FollowUpDue <= request.FollowUpDueBefore.Value);
+
         var totalCount = await filtered.CountAsync(cancellationToken);
 
         var items = await filtered

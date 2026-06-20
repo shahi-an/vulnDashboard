@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { VulnerabilitiesPage } from './pages/VulnerabilitiesPage';
 import { VulnerabilityDetailPage } from './pages/VulnerabilityDetailPage';
 import { FileVulnerabilityPage } from './pages/FileVulnerabilityPage';
+import { AssetsPage } from './pages/AssetsPage';
 import { AppLayout } from './components/common/AppLayout';
 
 const DEV_AUTH = import.meta.env.VITE_DEV_AUTH === 'true';
@@ -19,6 +20,7 @@ function AppRoutes() {
         <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
         <Route path="/vulnerabilities/:id" element={<VulnerabilityDetailPage />} />
         <Route path="/file-vulnerability" element={<FileVulnerabilityPage />} />
+        <Route path="/assets" element={<AssetsPage />} />
       </Route>
     </Routes>
   );

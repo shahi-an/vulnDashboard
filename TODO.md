@@ -1,6 +1,6 @@
 # VulnTrack — TODO
 
-> Last updated: 2026-06-20
+> Last updated: 2026-06-20 (session 2)
 > Based on RTM audit against original business requirements.
 
 ---
@@ -53,21 +53,31 @@ Effort scale: XS < 1 h · S 1–4 h · M 4–8 h · L 1–2 d · XL 3–5 d · X
 - Application.Tests — `CreateVulnerabilityCommandHandlerTests`, `UpdateVulnerabilityStatusCommandHandlerTests`, `ProcessDueRemindersCommandHandlerTests`, `ValidationBehaviorTests`, `TestDbContext`, `TestServiceProvider`
 - Api.Tests — `VulnerabilitiesControllerTests` (11 scenarios), `TestAuthHandler`, `VulnTrackWebApplicationFactory`
 
-### 🔄 In Progress
+### ✅ Completed (session 2–3)
 
-- `AssetsController` — stub exists (`GET /api/assets` returns empty array); handler wiring pending
+- `GetAssetsQuery` + handler + `GetAssetByIdQuery` + handler
+- `CreateAssetCommand` + handler + `CreateAssetCommandValidator`
+- `UpdateAssetCommand` + handler + `UpdateAssetCommandValidator`
+- `DeleteAssetCommand` + handler
+- `AssetsController` — GET list, GET by id, POST, PUT, DELETE (fully wired)
+- `SearchUsersQuery` + handler (wraps `IGraphService.SearchUsersAsync`)
+- `UsersController` — `GET /api/users/search?q=`
+- `GetVulnerabilitiesQuery` — `CreatedAfter`/`CreatedBefore`/`FollowUpDueBefore` params
+- `GetVulnerabilitiesQueryHandler` — applies all three date filters
+- `VulnerabilitiesController` — accepts all date params
+- `CreateVulnerabilityCommand` — added optional `TeamId`
+- `AssignVulnerabilityCommand` — `Email` is now nullable (team-only assignment allowed)
+- `AssignVulnerabilityCommandValidator` — requires email OR teamId
+- `VulnerabilityAssignedEvent` — `AssignedToEmail` now nullable
+- `Asset.Update()` domain method — includes `description` param
 
-### ⬜ Pending
+### ⬜ Pending (all low priority)
 
-| Task | Priority | Effort | Dependencies |
-|---|---|---|---|
-| Add `DbSet<Asset> Assets` to `IApplicationDbContext` and `ApplicationDbContext` | 🔴 | XS | None |
-| Assets feature — `GetAssetsQuery` + handler | 🔴 | S | `IApplicationDbContext.Assets` |
-| Assets feature — `GetAssetByIdQuery` + handler | 🔴 | S | `IApplicationDbContext.Assets` |
-| Assets feature — `CreateAssetCommand` + handler + validator | 🔴 | S | `IApplicationDbContext.Assets` |
-| Assets feature — `UpdateAssetCommand` + handler + validator | 🟡 | S | `CreateAssetCommand` |
-| Assets feature — `DeleteAssetCommand` + handler | 🟡 | S | `CreateAssetCommand` |
-| Wire `AssetsController` to Asset CQRS handlers (CRUD) | 🔴 | S | Asset handlers above |
+| Task | Priority | Effort |
+|---|---|---|
+| `UploadBatch` processing pipeline — publish ServiceBus message after blob upload | 🟡 | L |
+| `SearchUsersQuery` — Application handler tests | 🟢 | S |
+| Asset handler tests | 🟢 | M |
 | `SearchUsersQuery` — Application-layer query wrapping `IGraphService.SearchUsersAsync` for use from controllers | 🟡 | S | None |
 | `GET /api/users/search?q=` endpoint exposing Graph user search to frontend | 🟡 | S | `SearchUsersQuery` |
 | `UploadBatch` processing pipeline — publish `vulnerability-events` ServiceBus message after blob upload so `VulnerabilityEventProcessor` can parse and create vulnerabilities | 🟡 | L | Service Bus wiring, file-parse logic |
@@ -96,36 +106,32 @@ Effort scale: XS < 1 h · S 1–4 h · M 4–8 h · L 1–2 d · XL 3–5 d · X
 - `LoginPage`
 - Type definitions: `VulnerabilityListItem`, `VulnerabilityDetail`, `Team`, `VulnerabilitySource`, `PagedResult<T>`, all request/response DTOs
 
-### 🔄 In Progress
+### ✅ Completed (session 1–3)
 
-- `VulnerabilityDetailPage` comments tab — displays comments; add-comment form not yet built
-- `VulnerabilityDetailPage` reminders tab — displays reminders; schedule-reminder form not yet built
-- `AssetsPage` — file exists; renders heading and placeholder text only
+- Team and Follow-up Due columns in `VulnerabilityTable`
+- Team filter + Follow-up Due date filter in `VulnerabilityFilters`
+- Add-comment form in `CommentsTab`
+- Schedule-reminder form in `RemindersTab` + `vulnerabilityService.scheduleReminder()`
+- `FileVulnerabilityPage` — Manual entry + Excel upload tabs
+- `uploadBatchService` — `create`, `getAll`
+- "File Vulnerability" nav item + `/file-vulnerability` route
+- `AssetsPage` — table, search/type filters, create/edit/delete modals
+- `assetService` — `getAll`, `getById`, `create`, `update`, `delete`
+- Assets nav item + `/assets` route
+- `userService` — user search via Graph
+- `UserSearchPicker` — typeahead component backed by `/api/users/search`
+- Assign button + modal on `VulnerabilityDetailPage` (user picker + team)
+- `CreateVulnerabilityModal` — added Team dropdown + Discovered At date
+- Dashboard team / source / date-range filters + global search box (navigates to inventory)
+- `VulnerabilitiesPage` reads initial search from dashboard navigation state
 
-### ⬜ Pending
+### ⬜ Pending (low priority)
 
-| Task | Priority | Effort | Dependencies |
-|---|---|---|---|
-| Add "Team" column to `VulnerabilityTable` | 🔴 | XS | None (`teamName` already in `VulnerabilityListItem` type) |
-| Add "Follow-up Due" column to `VulnerabilityTable` | 🔴 | XS | None (`followUpDue` already in type) |
-| Add Team filter dropdown to `VulnerabilityFilters` (calls `GET /api/teams`) | 🟡 | S | `teamService.getAll()` (done) |
-| Add Follow-up Due date filter to `VulnerabilityFilters` | 🟡 | S | None |
-| Add-comment form in `CommentsTab` (textarea + submit button calling `vulnerabilityService.addComment`) | 🔴 | S | None |
-| Schedule-reminder form/button in `RemindersTab` (recipient email, date picker, optional message) | 🔴 | M | `vulnerabilityService.scheduleReminder()` (needs adding) |
-| Add `scheduleReminder()` method to `vulnerabilityService` | 🔴 | XS | None |
-| User search picker component — typeahead backed by `GET /api/users/search` for Assign flow | 🟡 | M | `GET /api/users/search` endpoint |
-| Assign-vulnerability UI on detail page (user picker + optional team select) | 🟡 | M | User search picker |
-| Add Team, Assigned To, Discovered At fields to `CreateVulnerabilityModal` | 🟡 | S | `teamService.getAll()` (done) |
-| Excel upload UI — file picker modal or dedicated page (`/upload`) with source selector and drag-and-drop | 🔴 | L | `uploadBatchService` (below) |
-| `uploadBatchService` — `create(sourceId, file)`, `getAll()`, `getById()` | 🔴 | S | None (API endpoints done) |
-| "File Vulnerability" nav item in `AppLayout` sidebar | 🔴 | XS | Excel upload page/modal |
-| Register `/upload` route in `App.tsx` | 🔴 | XS | Excel upload page |
-| Dashboard filters — filter KPIs by Team, Source, or date range | 🟡 | L | `teamService`, `sourceService` (done) |
-| Dashboard search — global search box navigating to filtered Inventory | 🟢 | M | None |
-| `AssetsPage` — full implementation: asset table, create/edit/delete | 🟡 | XL | Asset API endpoints, `assetService` |
-| `assetService` — CRUD methods | 🟡 | S | Asset API endpoints |
-| Register `/assets` route in `App.tsx` and add Assets nav item | 🟡 | XS | `AssetsPage` |
-| Upload batch status polling — show processing progress on upload result | 🟢 | M | Excel upload UI |
+| Task | Priority | Effort |
+|---|---|---|
+| `UploadBatch` processing pipeline — publish ServiceBus message after blob upload | 🟡 | L |
+| Upload batch status polling on upload result page | 🟢 | M |
+| Add Assigned To field to `CreateVulnerabilityModal` | 🟢 | S |
 
 ---
 

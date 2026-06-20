@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Spinner } from '@/components/ui/Spinner';
 import { vulnerabilityService } from '@/services/vulnerabilityService';
 import { teamService } from '@/services/teamService';
@@ -35,12 +36,18 @@ function StatCard({ label, value, loading, accent = 'blue' }: StatCardProps) {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState('');
   const [teamId, setTeamId] = useState<string>('');
   const [sourceId, setSourceId] = useState<string>('');
+  const [createdAfter, setCreatedAfter] = useState<string>('');
+  const [createdBefore, setCreatedBefore] = useState<string>('');
 
   const filters = {
     ...(teamId ? { teamId } : {}),
     ...(sourceId ? { sourceId } : {}),
+    ...(createdAfter ? { createdAfter } : {}),
+    ...(createdBefore ? { createdBefore } : {}),
   };
 
   const teamsQ = useQuery({ queryKey: ['teams'], queryFn: () => teamService.getAll() });
@@ -74,13 +81,38 @@ export function DashboardPage() {
   const critHighCount =
     (criticalQ.data?.totalCount ?? 0) + (highQ.data?.totalCount ?? 0);
 
-  const hasFilters = !!teamId || !!sourceId;
+  const hasFilters = !!teamId || !!sourceId || !!createdAfter || !!createdBefore;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Summary of vulnerability posture across all servers.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Summary of vulnerability posture across all servers.</p>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchInput.trim()) {
+              navigate('/vulnerabilities', { state: { search: searchInput.trim() } });
+            }
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search vulnerabilities…"
+            className="w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
       {/* Filters */}
@@ -109,9 +141,29 @@ export function DashboardPage() {
           ))}
         </select>
 
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 font-medium">From</label>
+          <input
+            type="date"
+            value={createdAfter}
+            onChange={(e) => setCreatedAfter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 font-medium">To</label>
+          <input
+            type="date"
+            value={createdBefore}
+            onChange={(e) => setCreatedBefore(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
         {hasFilters && (
           <button
-            onClick={() => { setTeamId(''); setSourceId(''); }}
+            onClick={() => { setTeamId(''); setSourceId(''); setCreatedAfter(''); setCreatedBefore(''); }}
             className="text-sm text-gray-500 hover:text-gray-800 underline"
           >
             Clear filters

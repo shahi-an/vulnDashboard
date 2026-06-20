@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { VulnerabilityTable } from '@/components/vulnerability/VulnerabilityTable';
 import { VulnerabilityFilters } from '@/components/vulnerability/VulnerabilityFilters';
 import { CreateVulnerabilityModal } from '@/components/vulnerability/CreateVulnerabilityModal';
@@ -11,7 +12,12 @@ import type { GetVulnerabilitiesParams } from '@/types/vulnerability';
 const DEFAULT_FILTERS: GetVulnerabilitiesParams = { pageNumber: 1, pageSize: 25 };
 
 export function VulnerabilitiesPage() {
-  const [filters, setFilters] = useState<GetVulnerabilitiesParams>(DEFAULT_FILTERS);
+  const location = useLocation();
+  const initialSearch = (location.state as { search?: string } | null)?.search;
+  const [filters, setFilters] = useState<GetVulnerabilitiesParams>({
+    ...DEFAULT_FILTERS,
+    ...(initialSearch ? { search: initialSearch } : {}),
+  });
   const [showCreate, setShowCreate] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
