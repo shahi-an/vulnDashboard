@@ -1,4 +1,6 @@
+using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.Storage.Blobs;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 using VulnTrack.Api.Middleware;
@@ -74,7 +76,14 @@ builder.Services.AddCors(opts =>
 
 // ── Health checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<VulnTrack.Infrastructure.Data.ApplicationDbContext>("database");
+    .AddDbContextCheck<VulnTrack.Infrastructure.Data.ApplicationDbContext>("database")
+    .AddAzureBlobStorage(
+        sp => sp.GetRequiredService<BlobServiceClient>(),
+        name: "blob-storage")
+    .AddAzureServiceBusQueue(
+        sp => sp.GetRequiredService<ServiceBusClient>(),
+        queueName: builder.Configuration["ServiceBus:NotificationsQueue"] ?? "notifications",
+        name: "service-bus");
 
 var app = builder.Build();
 
