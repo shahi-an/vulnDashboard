@@ -48,29 +48,23 @@ tests/
 - Enums: `Severity`, `VulnerabilityStatus`, `VulnerabilityType`, `RemediationPriority`, `UploadBatchStatus`, `ReminderStatus`, `AssetType`
 - Domain events: `VulnerabilityCreatedEvent`, `VulnerabilityStatusChangedEvent`, `VulnerabilityAssignedEvent`, `VulnerabilityEcdUpdatedEvent`, `UploadBatchCompletedEvent`, `ReminderScheduledEvent`
 
-### Application layer — ~75%
-**Complete:**
-- Common: `IApplicationDbContext`, `ICurrentUserService`, `IBlobStorageService`, `IServiceBusPublisher`, `IGraphService`
+### Application layer — 100%
+- Common: `IApplicationDbContext`, `ICurrentUserService`, `IBlobStorageService`, `IServiceBusPublisher`, `IGraphService` (+ `SendEmailAsync`)
 - Common: `PagedResult<T>`, `Result`, `NotFoundException`, `ForbiddenAccessException`, `DomainEventNotification<T>`
 - Common: `ValidationBehavior<,>`, `LoggingBehavior<,>`
 - **Vulnerabilities feature** — 100%: 12 commands + handlers, 4 queries + handlers, 9 validators, 3 event handlers
-- **Teams feature** — commands + queries + validators created; **HANDLERS MISSING**
-- **Sources feature** — commands + queries + validators created; **HANDLERS MISSING**
-
-**Missing (see Remaining section):**
-- Team handlers (5 files)
-- Source handlers (4 files)
-- UploadBatches feature (commands, queries, handlers)
-- `ProcessDueRemindersCommand` + handler (used by SlaReminderTimer)
-- `GetPendingRemindersQuery` + handler (used by RemindersController)
-- `CancelReminderCommand` + handler (used by RemindersController)
+- **Teams feature** — 100%: 3 commands + handlers, 2 queries + handlers, 2 validators (handlers co-located in command/query files)
+- **Sources feature** — 100%: 3 commands + handlers, 1 query + handler, 2 validators (handlers co-located)
+- **Reminders feature** — 100%: `GetPendingRemindersQuery`, `CancelReminderCommand`, `ProcessDueRemindersCommand` (sends email via `IGraphService.SendEmailAsync` directly)
+- **UploadBatches feature** — 100%: `GetUploadBatchesQuery`, `GetUploadBatchByIdQuery`, `CreateUploadBatchCommand`
 
 ### Infrastructure layer — 100%
 - `ApplicationDbContext` with domain-event dispatch in `SaveChangesAsync`
 - EF configurations for all 9 entities (Fluent API, soft-delete filters, string-backed enums)
 - `BlobStorageService` — user delegation SAS (Managed Identity safe), `BlobUriBuilder` for authenticated client
 - `ServiceBusPublisher` — `ConcurrentDictionary` sender cache, `IAsyncDisposable`
-- `GraphService`, `CurrentUserService`
+- `GraphService` — `GetUserAsync`, `SearchUsersAsync`, `SendEmailAsync` (app-permission `Users[senderEmail].SendMail`)
+- `CurrentUserService`, `GraphSettings` (requires `Graph:SenderEmail` in config)
 - `DependencyInjection.cs` with explicit config-missing exceptions
 - **EF Core initial migration** — handwritten (no SDK installed), all 9 tables, 26 indexes, FK constraints
 
@@ -98,30 +92,11 @@ tests/
 
 ## REMAINING ❌
 
-### Priority 1 — Application layer gaps (blockers: API already wired, Functions uses ProcessDueReminders)
+### Priority 1 — COMPLETE ✅ (done session 2026-06-20)
 
-#### 1a. Team handlers (5 files in `Application/Features/Teams/`)
-- `CreateTeamCommandHandler.cs`
-- `UpdateTeamCommandHandler.cs`
-- `DeleteTeamCommandHandler.cs`
-- `GetTeamsQueryHandler.cs`
-- `GetTeamByIdQueryHandler.cs`
-
-#### 1b. Source handlers (4 files in `Application/Features/Sources/`)
-- `CreateVulnerabilitySourceCommandHandler.cs`
-- `UpdateVulnerabilitySourceCommandHandler.cs`
-- `ToggleSourceActiveCommandHandler.cs`
-- `GetVulnerabilitySourcesQueryHandler.cs`
-
-#### 1c. Reminder handlers (in `Application/Features/Vulnerabilities/` or a new `Reminders/` feature)
-- `GetPendingRemindersQuery.cs` + handler — used by `GET /api/reminders?dueBefore=...`
-- `CancelReminderCommand.cs` + handler — used by `DELETE /api/reminders/{id}`
-- `ProcessDueRemindersCommand.cs` + handler — used by `SlaReminderTimer`; queries DB for pending reminders where ScheduledFor <= now, sends emails via GraphService, marks Sent/Failed, returns count
-
-#### 1d. UploadBatch feature (new `Application/Features/UploadBatches/`)
-- `GetUploadBatchesQuery.cs` + handler — paginated list with optional sourceId filter
-- `GetUploadBatchByIdQuery.cs` + handler
-- `CreateUploadBatchCommand.cs` + handler — accepts file stream, uploads raw file to Blob, creates UploadBatch record, publishes to ServiceBus for async processing
+All Application layer handlers implemented. Email delivery wired: `ProcessDueRemindersCommand`
+calls `IGraphService.SendEmailAsync` → Graph `Users[senderEmail].SendMail` with app permissions.
+Requires `Graph:SenderEmail` config value in appsettings / env vars on both API and Functions.
 
 ### Priority 2 — Tests (none exist yet)
 
@@ -194,24 +169,23 @@ internal sealed class GetTeamsQueryHandler(IApplicationDbContext db)
 }
 ```
 
-### ProcessDueRemindersCommand — critical details
-The SLA timer calls: `await mediator.Send(new ProcessDueRemindersCommand(), ct)`  
-Handler must:
-1. Query `ScheduledReminders WHERE Status = 'Pending' AND ScheduledFor <= DateTimeOffset.UtcNow` (ignoring global filter since ScheduledReminder has no soft-delete)
-2. For each: call `IGraphService.SendEmailAsync(recipientEmail, subject, body)`
-3. On success: call `reminder.MarkSent()` + `db.SaveChangesAsync()`
-4. On failure: call `reminder.MarkFailed(reason)` + save
-5. Return `int` count of processed reminders
+### ProcessDueRemindersCommand — IMPLEMENTED
+Handler in `Application/Features/Reminders/Commands/ProcessDueRemindersCommand.cs`:
+1. Queries `ScheduledReminders WHERE Status = Pending AND ScheduledFor <= now` (include Vulnerability)
+2. If `Vulnerability.Status == Remediated` → `reminder.Skip()`
+3. Else → `IGraphService.SendEmailAsync(recipientEmail, subject, htmlBody)` → `reminder.MarkSent()`
+4. On exception → `reminder.MarkFailed(ex.Message)`
+5. Returns count of processed reminders (sent + skipped)
 
-### IGraphService.SendEmailAsync
-`GraphService` at `Infrastructure/Services/Graph/GraphService.cs` wraps the Microsoft Graph SDK. Ensure this method exists and is wired in DI.
+### IGraphService.SendEmailAsync — IMPLEMENTED
+`GraphService.SendEmailAsync` calls `graphClient.Users[senderEmail].SendMail.PostAsync(...)`.
+Requires **application permission** `Mail.Send` on the Managed Identity.
+Configure sender mailbox via `Graph:SenderEmail` in appsettings.
 
-### Upload batch flow
-1. Controller receives `IFormFile`, calls `CreateUploadBatchCommand`
-2. Handler uploads raw file to blob: `await blobService.UploadAsync(stream, fileName, contentType, containerName, ct)`
-3. Creates `UploadBatch` record with `Status = Queued` and `RawFileBlobUri`
-4. Publishes `UploadBatchCreatedEvent` to ServiceBus queue `vulnerability-events`
-5. `VulnerabilityEventProcessor` (Functions) consumes the event and processes the file asynchronously
+### Upload batch flow — IMPLEMENTED
+1. Controller receives `IFormFile` → `CreateUploadBatchCommand(sourceId, fileName, stream, contentType)`
+2. Handler: uploads to Blob via `IBlobStorageService.UploadAsync` → creates `UploadBatch` (Status=Queued) with `RawFileBlobUri`
+3. No synchronous ServiceBus publish — async processing by Functions `VulnerabilityEventProcessor` on `vulnerability-events` (wire via domain event or manual trigger in next iteration)
 
 ### Enum-as-string pattern (all enum columns)
 ```csharp
@@ -236,11 +210,10 @@ Open Claude Code in `C:\Projects\vulnerabilityApp` and paste:
 ```
 Read plan.md — this is our VulnTrack project build plan.
 
-Please start with Priority 1 from the plan: implement the missing Application layer handlers.
-Begin with 1a (Team handlers), then 1b (Source handlers), then 1c (Reminder handlers
-including ProcessDueRemindersCommand), then 1d (UploadBatch feature).
-Follow the exact same patterns as the existing Vulnerability handlers in:
-src/backend/VulnTrack.Application/Features/Vulnerabilities/Commands/
+Priority 1 is complete. Please tackle Priority 2: write tests.
+Start with 2a (Domain.Tests — entity factory tests and domain event tests),
+then 2b (Application.Tests — handler unit tests with Moq + EF InMemory),
+then 2c (Api.Tests — WebApplicationFactory integration tests).
 ```
 
 ---

@@ -46,6 +46,8 @@ public static class DependencyInjection
             configuration.GetSection(AzureStorageSettings.SectionName));
         services.Configure<ServiceBusSettings>(
             configuration.GetSection(ServiceBusSettings.SectionName));
+        services.Configure<GraphSettings>(
+            configuration.GetSection(GraphSettings.SectionName));
 
         // ── Azure SDK clients (DefaultAzureCredential → Managed Identity) ──
         var credential = new DefaultAzureCredential();

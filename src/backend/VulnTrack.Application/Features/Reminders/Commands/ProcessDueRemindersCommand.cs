@@ -14,7 +14,7 @@ public sealed record ProcessDueRemindersCommand : IRequest<int>;
 
 internal sealed class ProcessDueRemindersCommandHandler(
     IApplicationDbContext dbContext,
-    IServiceBusPublisher publisher,
+    IGraphService graphService,
     ILogger<ProcessDueRemindersCommandHandler> logger)
     : IRequestHandler<ProcessDueRemindersCommand, int>
 {
@@ -39,16 +39,15 @@ internal sealed class ProcessDueRemindersCommandHandler(
                 }
                 else
                 {
-                    await publisher.PublishAsync("notifications", new
-                    {
-                        EventType = "ReminderDue",
-                        reminder.VulnerabilityId,
-                        reminder.RecipientEmail,
-                        reminder.RecipientUserId,
-                        reminder.Message,
-                        reminder.ScheduledFor
-                    }, cancellationToken);
+                    var subject = $"[VulnTrack] Reminder: {reminder.Vulnerability.VulnerabilityNumber}";
+                    var body = $"""
+                        <p>This is a scheduled reminder for vulnerability
+                        <strong>{reminder.Vulnerability.VulnerabilityNumber}</strong>.</p>
+                        <p>{reminder.Message ?? "Please review and take action on this vulnerability."}</p>
+                        <p><em>Scheduled for: {reminder.ScheduledFor:f} UTC</em></p>
+                        """;
 
+                    await graphService.SendEmailAsync(reminder.RecipientEmail, subject, body, cancellationToken);
                     reminder.MarkSent();
                 }
 

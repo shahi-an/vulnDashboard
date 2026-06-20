@@ -12,4 +12,5 @@ public interface IGraphService
 {
     Task<IGraphUserDto?> GetUserAsync(string userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IGraphUserDto>> SearchUsersAsync(string query, CancellationToken cancellationToken = default);
+    Task SendEmailAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
 }
