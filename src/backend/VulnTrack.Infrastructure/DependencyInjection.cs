@@ -8,6 +8,7 @@ using Microsoft.Graph;
 using VulnTrack.Application.Common.Interfaces;
 using VulnTrack.Infrastructure.Data;
 using VulnTrack.Infrastructure.Services.Azure;
+using VulnTrack.Infrastructure.Services.Dev;
 using VulnTrack.Infrastructure.Services.Graph;
 using VulnTrack.Infrastructure.Services.Identity;
 using VulnTrack.Infrastructure.Settings;
@@ -16,6 +17,34 @@ namespace VulnTrack.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddDevelopmentInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddDbContext<ApplicationDbContext>(opts =>
+            opts.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sql => sql.EnableRetryOnFailure(3).CommandTimeout(30)));
+
+        services.AddScoped<IApplicationDbContext>(sp =>
+            sp.GetRequiredService<ApplicationDbContext>());
+
+        services.Configure<AzureStorageSettings>(
+            configuration.GetSection(AzureStorageSettings.SectionName));
+        services.Configure<ServiceBusSettings>(
+            configuration.GetSection(ServiceBusSettings.SectionName));
+        services.Configure<GraphSettings>(
+            configuration.GetSection(GraphSettings.SectionName));
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IBlobStorageService, LocalBlobStorageService>();
+        services.AddSingleton<IServiceBusPublisher, StubServiceBusPublisher>();
+        services.AddScoped<IGraphService, StubGraphService>();
+
+        return services;
+    }
+
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)

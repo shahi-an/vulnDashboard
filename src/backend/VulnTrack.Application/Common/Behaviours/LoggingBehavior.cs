@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using VulnTrack.Application.Common.Interfaces;
 
 namespace VulnTrack.Application.Common.Behaviours;
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using VulnTrack.Domain.Enums;
@@ -83,8 +83,6 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasDatabaseName("IX_Assets_Type");
 
                 b.ToTable("Assets");
-
-                b.HasQueryFilter("a => !a.IsDeleted");
             });
 
             modelBuilder.Entity("VulnTrack.Domain.Entities.Attachment", b =>
@@ -300,8 +298,6 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasDatabaseName("IX_Teams_Name");
 
                 b.ToTable("Teams");
-
-                b.HasQueryFilter("t => !t.IsDeleted");
             });
 
             modelBuilder.Entity("VulnTrack.Domain.Entities.UploadBatch", b =>
@@ -377,8 +373,6 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasDatabaseName("IX_UploadBatches_Status");
 
                 b.ToTable("UploadBatches");
-
-                b.HasQueryFilter("b => !b.IsDeleted");
             });
 
             modelBuilder.Entity("VulnTrack.Domain.Entities.Vulnerability", b =>
@@ -418,8 +412,7 @@ namespace VulnTrack.Infrastructure.Data.Migrations
 
                 b.Property<string>("Description")
                     .IsRequired()
-                    .HasMaxLength(8000)
-                    .HasColumnType("nvarchar(8000)");
+                    .HasColumnType("nvarchar(max)");
 
                 b.Property<DateTimeOffset?>("DiscoveredAt")
                     .HasColumnType("datetimeoffset");
@@ -460,8 +453,7 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasColumnType("nvarchar(20)");
 
                 b.Property<string>("Solution")
-                    .HasMaxLength(8000)
-                    .HasColumnType("nvarchar(8000)");
+                    .HasColumnType("nvarchar(max)");
 
                 b.Property<Guid>("SourceId")
                     .HasColumnType("uniqueidentifier");
@@ -527,8 +519,6 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasDatabaseName("IX_Vulnerabilities_VulnerabilityNumber");
 
                 b.ToTable("Vulnerabilities");
-
-                b.HasQueryFilter("v => !v.IsDeleted");
             });
 
             modelBuilder.Entity("VulnTrack.Domain.Entities.VulnerabilityComment", b =>
@@ -619,8 +609,6 @@ namespace VulnTrack.Infrastructure.Data.Migrations
                     .HasDatabaseName("IX_VulnerabilitySources_Name");
 
                 b.ToTable("VulnerabilitySources");
-
-                b.HasQueryFilter("s => !s.IsDeleted");
             });
 
             modelBuilder.Entity("VulnTrack.Domain.Entities.Attachment", b =>
@@ -722,3 +710,4 @@ namespace VulnTrack.Infrastructure.Data.Migrations
         }
     }
 }
+

@@ -6,8 +6,12 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach Bearer token on every request
+const DEV_AUTH = import.meta.env.VITE_DEV_AUTH === 'true';
+
+// Attach Bearer token on every request (skipped in dev-auth bypass mode)
 apiClient.interceptors.request.use(async (config) => {
+  if (DEV_AUTH) return config;
+
   const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0];
 
   if (account) {

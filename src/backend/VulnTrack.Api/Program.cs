@@ -1,28 +1,45 @@
-using Azure.Messaging.ServiceBus;
+using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
+using VulnTrack.Api.Auth;
 using VulnTrack.Api.Middleware;
 using VulnTrack.Application;
 using VulnTrack.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Authentication (Microsoft Entra ID) ──────────────────────────────────────
-builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd")
-    .EnableTokenAcquisitionToCallDownstreamApi()
-    .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-    .AddInMemoryTokenCaches();
+// ── Authentication ────────────────────────────────────────────────────────────
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddAuthentication(DevAuthHandler.SchemeName)
+        .AddScheme<AuthenticationSchemeOptions, DevAuthHandler>(DevAuthHandler.SchemeName, null);
+}
+else
+{
+    builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd")
+        .EnableTokenAcquisitionToCallDownstreamApi()
+        .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
+        .AddInMemoryTokenCaches();
+}
 
 builder.Services.AddAuthorization();
 
 // ── Application + Infrastructure layers ──────────────────────────────────────
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddDevelopmentInfrastructure(builder.Configuration);
+else
+    builder.Services.AddInfrastructure(builder.Configuration);
 
 // ── Controllers ───────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 
 // ── Swagger / OpenAPI ─────────────────────────────────────────────────────────
@@ -35,34 +52,38 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Vulnerability Management Portal REST API"
     });
 
-    c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    if (!builder.Environment.IsDevelopment())
     {
-        Type = SecuritySchemeType.OAuth2,
-        Flows = new OpenApiOAuthFlows
+        c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
         {
-            AuthorizationCode = new OpenApiOAuthFlow
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows
             {
-                AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/oauth2/v2.0/authorize"),
-                TokenUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/oauth2/v2.0/token"),
-                Scopes = new Dictionary<string, string>
+                AuthorizationCode = new OpenApiOAuthFlow
                 {
-                    [$"{builder.Configuration["AzureAd:Audience"]}/access_as_user"] = "Access VulnTrack API"
+                    AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/oauth2/v2.0/authorize"),
+                    TokenUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/oauth2/v2.0/token"),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        [$"{builder.Configuration["AzureAd:Audience"]}/access_as_user"] = "Access VulnTrack API"
+                    }
                 }
             }
-        }
-    });
+        });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
         {
-            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" } },
-            []
-        }
-    });
+            {
+                new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" } },
+                []
+            }
+        });
+    }
 });
 
 // ── Observability (Azure Monitor + OpenTelemetry) ─────────────────────────────
-builder.Services.AddOpenTelemetry().UseAzureMonitor();
+if (!builder.Environment.IsDevelopment())
+    builder.Services.AddOpenTelemetry().UseAzureMonitor();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(opts =>
@@ -75,29 +96,35 @@ builder.Services.AddCors(opts =>
 });
 
 // ── Health checks ─────────────────────────────────────────────────────────────
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<VulnTrack.Infrastructure.Data.ApplicationDbContext>("database")
-    .AddAzureBlobStorage(
-        sp => sp.GetRequiredService<BlobServiceClient>(),
-        name: "blob-storage")
-    .AddAzureServiceBusQueue(
-        sp => sp.GetRequiredService<ServiceBusClient>(),
-        queueName: builder.Configuration["ServiceBus:NotificationsQueue"] ?? "notifications",
-        name: "service-bus");
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddDbContextCheck<VulnTrack.Infrastructure.Data.ApplicationDbContext>("database");
+
+if (!builder.Environment.IsDevelopment())
+{
+    healthChecks
+        .AddAzureBlobStorage(
+            sp => sp.GetRequiredService<BlobServiceClient>(),
+            name: "blob-storage")
+        .AddAzureServiceBusQueue(
+            sp => (builder.Configuration["ServiceBus:Namespace"] ?? "devlocal") + ".servicebus.windows.net",
+            sp => builder.Configuration["ServiceBus:NotificationsQueue"] ?? "notifications",
+            sp => new DefaultAzureCredential(),
+            name: "service-bus");
+}
 
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VulnTrack API v1");
+    if (!app.Environment.IsDevelopment())
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "VulnTrack API v1");
         c.OAuthClientId(builder.Configuration["AzureAd:ClientId"]);
         c.OAuthUsePkce();
-    });
-}
+    }
+});
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
