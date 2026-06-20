@@ -98,22 +98,27 @@ All Application layer handlers implemented. Email delivery wired: `ProcessDueRem
 calls `IGraphService.SendEmailAsync` → Graph `Users[senderEmail].SendMail` with app permissions.
 Requires `Graph:SenderEmail` config value in appsettings / env vars on both API and Functions.
 
-### Priority 2 — Tests (none exist yet)
+### Priority 2 — COMPLETE ✅ (done session 2026-06-20)
 
-Test projects are scaffolded in the solution (`tests/`) but have zero test files.
+#### 2a. `VulnTrack.Domain.Tests` ✅
+- `VulnerabilityTests.cs` — Create factory, priority derivation, domain events, UpdateStatus, Assign, SetEcd, ScheduleReminder
+- `UploadBatchTests.cs` — state machine (Queued→Processing→Completed/CompletedWithErrors/Failed/Cancelled), UploadBatchCompletedEvent
+- `ScheduledReminderTests.cs` — MarkSent, MarkFailed, Cancel, Skip transitions
 
-#### 2a. `VulnTrack.Domain.Tests`
-- Entity factory tests (Vulnerability.Create, UploadBatch state machine, ScheduledReminder transitions)
-- Domain event raising tests
+#### 2b. `VulnTrack.Application.Tests` ✅
+- `Common/TestDbContext.cs` — EF Core InMemory context implementing IApplicationDbContext
+- `Common/TestServiceProvider.cs` — DI builder: MediatR + TestDbContext + mocked external deps
+- `Handlers/CreateVulnerabilityCommandHandlerTests.cs`
+- `Handlers/UpdateVulnerabilityStatusCommandHandlerTests.cs`
+- `Handlers/ProcessDueRemindersCommandHandlerTests.cs` — email success, skip (remediated), email failure, no-op
+- `Behaviours/ValidationBehaviorTests.cs` — valid pass, empty server name, invalid IP, bad CVSS, bad CVE format
+- Also added `Microsoft.EntityFrameworkCore` to `VulnTrack.Application.csproj` (was missing for IApplicationDbContext)
 
-#### 2b. `VulnTrack.Application.Tests`
-- Handler unit tests with mocked IApplicationDbContext (Moq + EF InMemory)
-- ValidationBehavior pipeline tests
-- Focus: CreateVulnerabilityCommandHandler, UpdateVulnerabilityStatusCommandHandler, ProcessDueRemindersCommandHandler
-
-#### 2c. `VulnTrack.Api.Tests`
-- WebApplicationFactory integration tests with EF InMemory
-- Happy-path + error-case tests for VulnerabilitiesController
+#### 2c. `VulnTrack.Api.Tests` ✅
+- `Infrastructure/TestAuthHandler.cs` — replaces JWT Bearer in tests (auto-authenticates)
+- `Infrastructure/VulnTrackWebApplicationFactory.cs` — overrides EF (InMemory), mocks Azure services, overrides auth
+- `Controllers/VulnerabilitiesControllerTests.cs` — per-test factory isolation; 11 scenarios covering GET/POST/PATCH + 400/404 error paths
+- Added `Moq` package to `VulnTrack.Api.Tests.csproj`
 
 ### Priority 3 — Azure infrastructure (deploy to cloud)
 
