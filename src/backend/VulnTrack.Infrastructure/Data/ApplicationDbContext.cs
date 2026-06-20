@@ -20,10 +20,23 @@ public sealed class ApplicationDbContext(
     public DbSet<UploadBatch> UploadBatches => Set<UploadBatch>();
     public DbSet<ScheduledReminder> ScheduledReminders => Set<ScheduledReminder>();
     public DbSet<VulnerabilityComment> Comments => Set<VulnerabilityComment>();
+    public DbSet<Asset> Assets => Set<Asset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // All Guid PKs are client-generated (BaseEntity.Id = Guid.NewGuid()).
+        // Without this, EF Server treats a non-default Guid key found in a navigation
+        // collection as an existing row and generates UPDATE instead of INSERT.
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var pk = entityType.FindPrimaryKey();
+            if (pk is null) continue;
+            foreach (var prop in pk.Properties.Where(p => p.ClrType == typeof(Guid)))
+                prop.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+        }
+
         base.OnModelCreating(modelBuilder);
     }
 

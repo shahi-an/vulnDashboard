@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Spinner } from '@/components/ui/Spinner';
 import { vulnerabilityService } from '@/services/vulnerabilityService';
+import { teamService } from '@/services/teamService';
+import { sourceService } from '@/services/sourceService';
 
 interface StatCardProps {
   label: string;
@@ -32,39 +35,88 @@ function StatCard({ label, value, loading, accent = 'blue' }: StatCardProps) {
 }
 
 export function DashboardPage() {
+  const [teamId, setTeamId] = useState<string>('');
+  const [sourceId, setSourceId] = useState<string>('');
+
+  const filters = {
+    ...(teamId ? { teamId } : {}),
+    ...(sourceId ? { sourceId } : {}),
+  };
+
+  const teamsQ = useQuery({ queryKey: ['teams'], queryFn: () => teamService.getAll() });
+  const sourcesQ = useQuery({ queryKey: ['sources'], queryFn: () => sourceService.getAll() });
+
   const openQ = useQuery({
-    queryKey: ['vulnerabilities', { status: 'Open', pageSize: 1 }],
-    queryFn: () => vulnerabilityService.getAll({ status: 'Open', pageSize: 1 }),
+    queryKey: ['vulnerabilities', { status: 'Open', pageSize: 1, ...filters }],
+    queryFn: () => vulnerabilityService.getAll({ status: 'Open', pageSize: 1, ...filters }),
   });
 
   const criticalQ = useQuery({
-    queryKey: ['vulnerabilities', { severity: 'Critical', status: 'Open', pageSize: 1 }],
-    queryFn: () => vulnerabilityService.getAll({ severity: 'Critical', status: 'Open', pageSize: 1 }),
+    queryKey: ['vulnerabilities', { severity: 'Critical', status: 'Open', pageSize: 1, ...filters }],
+    queryFn: () => vulnerabilityService.getAll({ severity: 'Critical', status: 'Open', pageSize: 1, ...filters }),
   });
 
   const highQ = useQuery({
-    queryKey: ['vulnerabilities', { severity: 'High', status: 'Open', pageSize: 1 }],
-    queryFn: () => vulnerabilityService.getAll({ severity: 'High', status: 'Open', pageSize: 1 }),
+    queryKey: ['vulnerabilities', { severity: 'High', status: 'Open', pageSize: 1, ...filters }],
+    queryFn: () => vulnerabilityService.getAll({ severity: 'High', status: 'Open', pageSize: 1, ...filters }),
   });
 
   const remediatedQ = useQuery({
-    queryKey: ['vulnerabilities', { status: 'Remediated', pageSize: 1 }],
-    queryFn: () => vulnerabilityService.getAll({ status: 'Remediated', pageSize: 1 }),
+    queryKey: ['vulnerabilities', { status: 'Remediated', pageSize: 1, ...filters }],
+    queryFn: () => vulnerabilityService.getAll({ status: 'Remediated', pageSize: 1, ...filters }),
   });
 
   const totalQ = useQuery({
-    queryKey: ['vulnerabilities', { pageSize: 1 }],
-    queryFn: () => vulnerabilityService.getAll({ pageSize: 1 }),
+    queryKey: ['vulnerabilities', { pageSize: 1, ...filters }],
+    queryFn: () => vulnerabilityService.getAll({ pageSize: 1, ...filters }),
   });
 
   const critHighCount =
     (criticalQ.data?.totalCount ?? 0) + (highQ.data?.totalCount ?? 0);
+
+  const hasFilters = !!teamId || !!sourceId;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">Summary of vulnerability posture across all servers.</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={teamId}
+          onChange={(e) => setTeamId(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          disabled={teamsQ.isLoading}
+        >
+          <option value="">All teams</option>
+          {teamsQ.data?.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+
+        <select
+          value={sourceId}
+          onChange={(e) => setSourceId(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          disabled={sourcesQ.isLoading}
+        >
+          <option value="">All sources</option>
+          {sourcesQ.data?.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+
+        {hasFilters && (
+          <button
+            onClick={() => { setTeamId(''); setSourceId(''); }}
+            className="text-sm text-gray-500 hover:text-gray-800 underline"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

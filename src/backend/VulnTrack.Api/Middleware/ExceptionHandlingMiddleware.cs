@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using Microsoft.AspNetCore.Hosting;
 using VulnTrack.Application.Common.Exceptions;
 
 namespace VulnTrack.Api.Middleware;
@@ -42,10 +43,12 @@ internal sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             context.Response.ContentType = "application/json";
 
+            var isDev = context.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() ?? false;
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
                 error = "An unexpected error occurred.",
-                traceId = context.TraceIdentifier
+                traceId = context.TraceIdentifier,
+                detail = isDev ? ex.ToString() : null
             }));
         }
     }

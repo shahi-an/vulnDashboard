@@ -13,6 +13,7 @@ public interface IApplicationDbContext
     DbSet<UploadBatch> UploadBatches { get; }
     DbSet<ScheduledReminder> ScheduledReminders { get; }
     DbSet<VulnerabilityComment> Comments { get; }
+    DbSet<Asset> Assets { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
