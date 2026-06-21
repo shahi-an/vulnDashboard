@@ -1,6 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthenticatedTemplate, MsalProvider, UnauthenticatedTemplate } from '@azure/msal-react';
-import { msalInstance } from './lib/msal';
+import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { VulnerabilitiesPage } from './pages/VulnerabilitiesPage';
@@ -36,17 +35,15 @@ export function App() {
   }
 
   return (
-    <MsalProvider instance={msalInstance}>
-      <BrowserRouter>
-        <UnauthenticatedTemplate>
-          <Routes>
-            <Route path="*" element={<LoginPage />} />
-          </Routes>
-        </UnauthenticatedTemplate>
-        <AuthenticatedTemplate>
-          <AppRoutes />
-        </AuthenticatedTemplate>
-      </BrowserRouter>
-    </MsalProvider>
+    <BrowserRouter>
+      <UnauthenticatedTemplate>
+        <Routes>
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </UnauthenticatedTemplate>
+      <AuthenticatedTemplate>
+        <AppRoutes />
+      </AuthenticatedTemplate>
+    </BrowserRouter>
   );
 }
