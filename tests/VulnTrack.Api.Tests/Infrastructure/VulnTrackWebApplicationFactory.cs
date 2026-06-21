@@ -1,5 +1,8 @@
+using System.IO.Pipelines;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,6 +50,14 @@ public sealed class VulnTrackWebApplicationFactory : WebApplicationFactory<Progr
             });
         });
 
+        // ── Fix: .NET 10 runtime's System.Text.Json checks PipeWriter.UnflushedBytes,
+        //         but the test host's ResponseBodyPipeWriter doesn't implement it.
+        //         Replace IHttpResponseBodyFeature with StreamResponseBodyFeature (whose
+        //         underlying PipeWriter is StreamPipeWriter which DOES implement
+        //         UnflushedBytes in .NET 10+). ──────────────────────────────────────
+        builder.ConfigureServices(services =>
+            services.AddTransient<IStartupFilter>(_ => new ResponseBodyPipeWriterFixFilter()));
+
         builder.ConfigureServices(services =>
         {
             // ── Replace SQL Server DbContext with InMemory ───────────────────────
@@ -93,4 +104,51 @@ public sealed class VulnTrackWebApplicationFactory : WebApplicationFactory<Progr
                     TestAuthHandler.SchemeName, _ => { });
         });
     }
+}
+
+// In .NET 10 runtime (used via RollForward=LatestMajor), System.Text.Json accesses
+// PipeWriter.UnflushedBytes when serialising controller responses. The test host's
+// ResponseBodyPipeWriter does not implement this abstract property (throws
+// NotImplementedException → wrapped as InvalidOperationException). This filter adds
+// a middleware that replaces the response body feature with a wrapper whose Writer
+// is created via PipeWriter.Create(stream), which returns a StreamPipeWriter that
+// DOES implement UnflushedBytes in .NET 10+.
+internal sealed class ResponseBodyPipeWriterFixFilter : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
+        => app =>
+        {
+            app.Use(async (context, nextMiddleware) =>
+            {
+                var original = context.Features.Get<IHttpResponseBodyFeature>();
+                if (original is not null)
+                {
+                    context.Features.Set<IHttpResponseBodyFeature>(
+                        new CompatResponseBodyFeature(original));
+                }
+                await nextMiddleware(context);
+            });
+            next(app);
+        };
+}
+
+/// <summary>
+/// Wraps IHttpResponseBodyFeature and returns a StreamPipeWriter for Writer
+/// so that System.Text.Json's PipeWriter.UnflushedBytes check succeeds.
+/// </summary>
+internal sealed class CompatResponseBodyFeature(IHttpResponseBodyFeature inner)
+    : IHttpResponseBodyFeature
+{
+    private PipeWriter? _writer;
+
+    public Stream Stream => inner.Stream;
+
+    // PipeWriter.Create returns StreamPipeWriter which implements UnflushedBytes.
+    public PipeWriter Writer => _writer ??= System.IO.Pipelines.PipeWriter.Create(inner.Stream, new System.IO.Pipelines.StreamPipeWriterOptions(leaveOpen: true));
+
+    public Task CompleteAsync() => inner.CompleteAsync();
+    public void DisableBuffering() => inner.DisableBuffering();
+    public Task SendFileAsync(string path, long offset, long? count, CancellationToken ct)
+        => inner.SendFileAsync(path, offset, count, ct);
+    public Task StartAsync(CancellationToken ct = default) => inner.StartAsync(ct);
 }

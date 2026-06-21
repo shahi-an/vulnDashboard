@@ -1,6 +1,6 @@
 # VulnTrack — TODO
 
-> Last updated: 2026-06-20 (session 2)
+> Last updated: 2026-06-21 (session 5)
 > Based on RTM audit against original business requirements.
 
 ---
@@ -71,19 +71,29 @@ Effort scale: XS < 1 h · S 1–4 h · M 4–8 h · L 1–2 d · XL 3–5 d · X
 - `VulnerabilityAssignedEvent` — `AssignedToEmail` now nullable
 - `Asset.Update()` domain method — includes `description` param
 
+### ✅ Completed (session 4)
+
+- `UploadBatch` pipeline — `CreateUploadBatchCommandHandler` now publishes to `vulnerability-events` ServiceBus queue after blob upload
+- `SearchUsersQuery` — Application handler tests (3 scenarios)
+- `AssetHandlerTests` — 12 Application-layer tests covering all 5 handlers
+- `AssetTests` — 5 Domain entity unit tests
+- `AssetsControllerTests` — 10 Api integration tests covering all 5 endpoints
+- Upload batch status polling — `FileVulnerabilityPage` polls `GET /api/upload-batches/{id}` every 3 s until terminal status; shows progress bar, counts, and error summary
+
+### ✅ Completed (session 5 — all tests green)
+
+- `DependencyInjection.cs` — `AddValidatorsFromAssembly` now passes `includeInternalTypes: true` so all `internal sealed class` validators are registered (fixes `ValidationBehaviorTests` 4 failures)
+- `TestDbContext.SaveChangesAsync` — fixed EF Core InMemory cascade-state quirk: new entities added to private backing-field collections of a `Modified` principal are cascade-marked `Modified` instead of `Added` because the non-sentinel Guid PK confuses EF Core. Fix detects these (state = Modified, no property actually changed) and resets to `Added` before save (fixes `UpdateVulnerabilityStatusCommandHandlerTests` 3 failures; `ProcessDueRemindersCommandHandlerTests` 3 failures already fixed in session 4)
+- `VulnTrackWebApplicationFactory` — added `ResponseBodyPipeWriterFixFilter` / `CompatResponseBodyFeature` to replace the test host's `ResponseBodyPipeWriter` (which throws on `UnflushedBytes` in .NET 10 runtime via `RollForward=LatestMajor`) with a `StreamPipeWriter`-backed feature that properly implements `UnflushedBytes` (fixes 13 Api test failures)
+- `VulnerabilitiesControllerTests` — fixed Location header assertion to use `ContainEquivalentOf` (case-insensitive) matching `/api/Vulnerabilities/` from `[controller]` route token
+- **All 94 tests pass**: Domain.Tests 37/37, Application.Tests 36/36, Api.Tests 21/21
+
 ### ⬜ Pending (all low priority)
 
 | Task | Priority | Effort |
 |---|---|---|
-| `UploadBatch` processing pipeline — publish ServiceBus message after blob upload | 🟡 | L |
-| `SearchUsersQuery` — Application handler tests | 🟢 | S |
-| Asset handler tests | 🟢 | M |
-| `SearchUsersQuery` — Application-layer query wrapping `IGraphService.SearchUsersAsync` for use from controllers | 🟡 | S | None |
-| `GET /api/users/search?q=` endpoint exposing Graph user search to frontend | 🟡 | S | `SearchUsersQuery` |
-| `UploadBatch` processing pipeline — publish `vulnerability-events` ServiceBus message after blob upload so `VulnerabilityEventProcessor` can parse and create vulnerabilities | 🟡 | L | Service Bus wiring, file-parse logic |
-| Asset.Tests — unit tests for Asset domain entity | 🟢 | S | Asset entity (done) |
-| Assets feature handler tests | 🟢 | M | Asset handlers |
-| `AssetsController` integration tests | 🟢 | M | `AssetsController` wiring |
+| `SearchUsersQuery` — Application-layer query wrapping `IGraphService.SearchUsersAsync` for use from controllers | ✅ | — |
+| `GET /api/users/search?q=` endpoint exposing Graph user search to frontend | ✅ | — |
 
 ---
 
@@ -131,7 +141,7 @@ Effort scale: XS < 1 h · S 1–4 h · M 4–8 h · L 1–2 d · XL 3–5 d · X
 |---|---|---|
 | `UploadBatch` processing pipeline — publish ServiceBus message after blob upload | 🟡 | L |
 | Upload batch status polling on upload result page | 🟢 | M |
-| Add Assigned To field to `CreateVulnerabilityModal` | 🟢 | S |
+| ~~Add Assigned To field to `CreateVulnerabilityModal`~~ | ✅ | S |
 
 ---
 

@@ -6,6 +6,7 @@ using VulnTrack.Application.Features.Vulnerabilities.Commands;
 using VulnTrack.Application.Tests.Common;
 using VulnTrack.Domain.Enums;
 using Xunit;
+using Severity = VulnTrack.Domain.Enums.Severity;
 
 namespace VulnTrack.Application.Tests.Behaviours;
 

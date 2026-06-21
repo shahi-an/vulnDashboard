@@ -69,7 +69,7 @@ public sealed class ProcessDueRemindersCommandHandlerTests
         var db = sp.GetRequiredService<IApplicationDbContext>();
         var mediator = sp.GetRequiredService<IMediator>();
 
-        await SeedReminderAsync(db, scheduledFor: DateTimeOffset.UtcNow.AddHours(-1), status: VulnerabilityStatus.Remediated);
+        await SeedReminderAsync(db, scheduledFor: DateTimeOffset.UtcNow.AddHours(-1), vulnStatus: VulnerabilityStatus.Remediated);
 
         var processed = await mediator.Send(new ProcessDueRemindersCommand());
 

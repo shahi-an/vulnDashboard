@@ -69,7 +69,7 @@ public sealed class VulnerabilitiesControllerTests : IDisposable
         var response = await _client.PostAsJsonAsync("/api/vulnerabilities", BuildCreateCommand(sourceId));
 
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.ToString().Should().Contain("/api/vulnerabilities/");
+        response.Headers.Location!.ToString().Should().ContainEquivalentOf("/api/vulnerabilities/");
     }
 
     [Fact]

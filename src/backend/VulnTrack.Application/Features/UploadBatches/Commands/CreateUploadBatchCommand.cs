@@ -15,12 +15,15 @@ public sealed record CreateUploadBatchCommand(
 internal sealed class CreateUploadBatchCommandHandler(
     IApplicationDbContext dbContext,
     IBlobStorageService blobStorage,
+    IServiceBusPublisher serviceBus,
     ICurrentUserService currentUser)
     : IRequestHandler<CreateUploadBatchCommand, Result<Guid>>
 {
+    private const string VulnerabilityEventsQueue = "vulnerability-events";
+
     public async Task<Result<Guid>> Handle(CreateUploadBatchCommand request, CancellationToken cancellationToken)
     {
-        var sourceExists = await dbContext.VulnerabilitySources.FindAsync([request.SourceId], cancellationToken)
+        _ = await dbContext.VulnerabilitySources.FindAsync([request.SourceId], cancellationToken)
             ?? throw new NotFoundException(nameof(VulnerabilitySource), request.SourceId);
 
         var rawUri = await blobStorage.UploadAsync(
@@ -30,6 +33,11 @@ internal sealed class CreateUploadBatchCommandHandler(
 
         dbContext.UploadBatches.Add(batch);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await serviceBus.PublishAsync(
+            VulnerabilityEventsQueue,
+            new { BatchId = batch.Id, BlobUri = rawUri, SourceId = request.SourceId },
+            cancellationToken);
 
         return Result<Guid>.Success(batch.Id);
     }
