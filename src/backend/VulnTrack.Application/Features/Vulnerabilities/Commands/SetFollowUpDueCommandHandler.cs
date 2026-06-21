@@ -16,7 +16,7 @@ internal sealed class SetFollowUpDueCommandHandler(
         var vulnerability = await dbContext.Vulnerabilities.FindAsync([request.Id], cancellationToken)
             ?? throw new NotFoundException(nameof(Vulnerability), request.Id);
 
-        vulnerability.SetFollowUpDue(request.FollowUpDue, currentUser.UserId);
+        vulnerability.SetFollowUpDue(request.FollowUpDue, currentUser.UserName);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();

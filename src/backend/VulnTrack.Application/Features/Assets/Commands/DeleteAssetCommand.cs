@@ -18,7 +18,7 @@ internal sealed class DeleteAssetCommandHandler(
         var asset = await dbContext.Assets.FindAsync([request.Id], cancellationToken)
             ?? throw new NotFoundException(nameof(Asset), request.Id);
 
-        asset.MarkDeleted(currentUser.UserId);
+        asset.MarkDeleted(currentUser.UserName);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();

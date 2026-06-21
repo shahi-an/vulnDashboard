@@ -19,7 +19,7 @@ internal sealed class ScheduleReminderCommandHandler(
         var reminder = vulnerability.ScheduleReminder(
             request.RecipientEmail,
             request.ScheduledFor,
-            currentUser.UserId,
+            currentUser.UserName,
             request.RecipientUserId,
             request.Message);
 

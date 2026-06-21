@@ -29,7 +29,7 @@ internal sealed class CreateUploadBatchCommandHandler(
         var rawUri = await blobStorage.UploadAsync(
             request.FileContent, request.OriginalFileName, request.ContentType, cancellationToken);
 
-        var batch = UploadBatch.Create(request.SourceId, request.OriginalFileName, currentUser.UserId, rawUri);
+        var batch = UploadBatch.Create(request.SourceId, request.OriginalFileName, currentUser.UserName, rawUri);
 
         dbContext.UploadBatches.Add(batch);
         await dbContext.SaveChangesAsync(cancellationToken);

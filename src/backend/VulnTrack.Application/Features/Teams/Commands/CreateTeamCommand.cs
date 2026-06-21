@@ -17,7 +17,7 @@ internal sealed class CreateTeamCommandHandler(
 {
     public async Task<Result<Guid>> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
     {
-        var team = Team.Create(request.Name, currentUser.UserId, request.Description, request.TeamLeadEmail);
+        var team = Team.Create(request.Name, currentUser.UserName, request.Description, request.TeamLeadEmail);
         dbContext.Teams.Add(team);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Success(team.Id);

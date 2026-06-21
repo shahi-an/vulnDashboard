@@ -22,7 +22,7 @@ internal sealed class UpdateTeamCommandHandler(
         var team = await dbContext.Teams.FindAsync([request.Id], cancellationToken)
             ?? throw new NotFoundException(nameof(Team), request.Id);
 
-        team.Update(request.Name, request.Description, request.TeamLeadEmail, currentUser.UserId);
+        team.Update(request.Name, request.Description, request.TeamLeadEmail, currentUser.UserName);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

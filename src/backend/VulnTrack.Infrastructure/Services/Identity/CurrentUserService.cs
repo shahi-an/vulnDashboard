@@ -17,6 +17,8 @@ internal sealed class CurrentUserService(IHttpContextAccessor httpContextAccesso
 
     public string? DisplayName => Principal?.FindFirstValue("name");
 
+    public string UserName => DisplayName ?? UserEmail ?? UserId;
+
     public IReadOnlyList<string> Roles => Principal?
         .FindAll(ClaimTypes.Role)
         .Select(c => c.Value)

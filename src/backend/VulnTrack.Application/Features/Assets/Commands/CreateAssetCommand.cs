@@ -23,7 +23,7 @@ internal sealed class CreateAssetCommandHandler(
         var asset = Asset.Create(
             request.Name,
             request.Type,
-            currentUser.UserId,
+            currentUser.UserName,
             request.Description,
             request.Owner,
             request.Environment);

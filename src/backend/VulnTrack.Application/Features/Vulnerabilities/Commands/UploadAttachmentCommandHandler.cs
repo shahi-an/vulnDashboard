@@ -30,7 +30,7 @@ internal sealed class UploadAttachmentCommandHandler(
             request.ContentType,
             blobUri,
             request.Content.Length,
-            currentUser.UserId,
+            currentUser.UserName,
             request.UploadBatchId);
 
         dbContext.Attachments.Add(attachment);

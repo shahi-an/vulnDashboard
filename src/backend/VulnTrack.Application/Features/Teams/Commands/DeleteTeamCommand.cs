@@ -18,7 +18,7 @@ internal sealed class DeleteTeamCommandHandler(
         var team = await dbContext.Teams.FindAsync([request.Id], cancellationToken)
             ?? throw new NotFoundException(nameof(Team), request.Id);
 
-        team.MarkDeleted(currentUser.UserId);
+        team.MarkDeleted(currentUser.UserName);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

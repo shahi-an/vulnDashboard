@@ -25,7 +25,7 @@ internal sealed class UpdateAssetCommandHandler(
         var asset = await dbContext.Assets.FindAsync([request.Id], cancellationToken)
             ?? throw new NotFoundException(nameof(Asset), request.Id);
 
-        asset.Update(request.Name, request.Type, request.Description, request.Owner, request.Environment, currentUser.UserId);
+        asset.Update(request.Name, request.Type, request.Description, request.Owner, request.Environment, currentUser.UserName);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();

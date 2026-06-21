@@ -19,9 +19,9 @@ internal sealed class ToggleSourceActiveCommandHandler(
             ?? throw new NotFoundException(nameof(VulnerabilitySource), request.Id);
 
         if (request.Activate)
-            source.Activate(currentUser.UserId);
+            source.Activate(currentUser.UserName);
         else
-            source.Deactivate(currentUser.UserId);
+            source.Deactivate(currentUser.UserName);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
