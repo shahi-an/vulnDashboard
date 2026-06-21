@@ -7,16 +7,19 @@ const msalConfig: Configuration = {
     redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI ?? window.location.origin,
   },
   cache: {
-    cacheLocation: 'sessionStorage',
-    storeAuthStateInCookie: false,
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
   },
   system: {
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
         if (containsPii) return;
-        if (level === LogLevel.Error) console.error(message);
-        if (level === LogLevel.Warning) console.warn(message);
+        if (level === LogLevel.Error) console.error('[MSAL]', message);
+        if (level === LogLevel.Warning) console.warn('[MSAL]', message);
+        if (level === LogLevel.Info) console.info('[MSAL]', message);
+        if (level === LogLevel.Verbose) console.debug('[MSAL]', message);
       },
+      logLevel: LogLevel.Info,
     },
   },
 };
