@@ -11,14 +11,16 @@ param senderEmail string
 var planName = 'asp-vulntrack-func-${environmentName}'
 var funcAppName = 'func-vulntrack-${environmentName}'
 
+// Linux Consumption (Y1/Dynamic) is not available in all regions.
+// B1 Basic dedicated plan supports Linux Functions everywhere.
 resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: planName
   location: location
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'B1'
+    tier: 'Basic'
   }
-  kind: 'functionapp,linux'
+  kind: 'linux'
   properties: {
     reserved: true
   }
@@ -36,6 +38,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     siteConfig: {
       linuxFxVersion: 'DOTNET-ISOLATED|8.0'
+      alwaysOn: true
       appSettings: [
         {
           // Identity-based connection for the WebJobs runtime storage (no shared key needed).
