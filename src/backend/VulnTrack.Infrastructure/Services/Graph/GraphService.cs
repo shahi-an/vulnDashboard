@@ -23,15 +23,19 @@ internal sealed class GraphService(GraphServiceClient graphClient, IOptions<Grap
 
     public async Task<IReadOnlyList<IGraphUserDto>> SearchUsersAsync(string query, CancellationToken cancellationToken = default)
     {
+        // $search with ConsistencyLevel:eventual is the correct Graph pattern for user typeahead.
+        // $filter with 'or' across multiple properties requires the same header but is less flexible.
+        var safe = query.Replace("\"", "");
         var result = await graphClient.Users.GetAsync(req =>
         {
-            req.QueryParameters.Filter = $"startswith(displayName,'{query}') or startswith(mail,'{query}')";
+            req.QueryParameters.Search = $"\"displayName:{safe}\" OR \"mail:{safe}\" OR \"userPrincipalName:{safe}\"";
             req.QueryParameters.Top = 20;
-            req.QueryParameters.Select = ["id", "displayName", "mail", "jobTitle"];
+            req.QueryParameters.Select = ["id", "displayName", "mail", "userPrincipalName", "jobTitle"];
+            req.Headers.Add("ConsistencyLevel", "eventual");
         }, cancellationToken);
 
         return result?.Value?
-            .Select(u => (IGraphUserDto)new GraphUserDto(u.Id!, u.DisplayName, u.Mail, u.JobTitle))
+            .Select(u => (IGraphUserDto)new GraphUserDto(u.Id!, u.DisplayName, u.Mail ?? u.UserPrincipalName, u.JobTitle))
             .ToList() ?? [];
     }
 
