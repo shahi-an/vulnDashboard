@@ -1,7 +1,7 @@
 using '../main.bicep'
 
 param environmentName = 'dev'
-param location = 'eastus2'
+param location = 'eastus'
 
 // Get your object ID:  az ad signed-in-user show --query id --output tsv
 param sqlAdminObjectId = '0e8d9b00-a59c-4d62-becf-ce673cf61510'
