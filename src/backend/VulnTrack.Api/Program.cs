@@ -66,7 +66,7 @@ builder.Services.AddSwaggerGen(c =>
                     TokenUrl = new Uri($"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/oauth2/v2.0/token"),
                     Scopes = new Dictionary<string, string>
                     {
-                        [$"{builder.Configuration["AzureAd:Audience"]}/access_as_user"] = "Access VulnTrack API"
+                        [$"api://{builder.Configuration["AzureAd:ClientId"]}/access_as_user"] = "Access VulnTrack API"
                     }
                 }
             }

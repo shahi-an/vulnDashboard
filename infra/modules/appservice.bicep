@@ -55,6 +55,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           value: apiClientId
         }
         {
+          name: 'AzureAd__Audience'
+          value: 'api://${apiClientId}'
+        }
+        {
           name: 'AzureStorage__AccountName'
           value: storageAccountName
         }
