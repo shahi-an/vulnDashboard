@@ -1,11 +1,11 @@
 name: Deploy Functions
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'src/backend/**'
-      - '.github/workflows/deploy-functions.yml'
 
 permissions:
   id-token: write

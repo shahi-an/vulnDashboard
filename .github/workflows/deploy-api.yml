@@ -1,11 +1,11 @@
 name: Deploy API
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'src/backend/**'
-      - '.github/workflows/deploy-api.yml'
 
 permissions:
   id-token: write
