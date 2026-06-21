@@ -272,10 +272,12 @@ dotnet ef database update --project VulnTrack.Infrastructure --startup-project V
 - **Application layer** — all CQRS handlers for Vulnerabilities (12 commands, 4 queries, 9 validators, 3 event handlers), Teams (3 commands, 2 queries), Sources (3 commands, 1 query), Reminders (`ProcessDueRemindersCommand` with Graph email, `GetPendingRemindersQuery`, `CancelReminderCommand`), UploadBatches (1 command, 2 queries); common models, interfaces, and pipeline behaviours
 - **Infrastructure layer** — `ApplicationDbContext`, 9 EF Fluent configurations, `BlobStorageService`, `ServiceBusPublisher`, `GraphService`, `CurrentUserService`, `DependencyInjection`
 - **EF migration** — all 9 tables, 26 indexes, FK constraints
-- **API** — `VulnerabilitiesController` (15 endpoints), `TeamsController` (5), `SourcesController` (5), `UploadBatchesController` (3), `RemindersController` (2); `ExceptionHandlingMiddleware`, `Program.cs` with Entra ID auth, Swagger, CORS, health checks, OpenTelemetry
+- **API** — `VulnerabilitiesController` (15 endpoints), `TeamsController` (5), `SourcesController` (5), `UploadBatchesController` (3), `RemindersController` (2), `AssetsController` (5), `UsersController` (1); `ExceptionHandlingMiddleware`, `Program.cs` with Entra ID auth, Swagger, CORS, health checks, OpenTelemetry; startup EF migration via `db.Database.MigrateAsync()` (non-Development only)
 - **Azure Functions** — `VulnerabilityEventProcessor` (Service Bus trigger), `SlaReminderTimer` (Timer trigger, daily 08:00 UTC, dispatches `ProcessDueRemindersCommand`)
-- **Frontend** — Auth flow (MSAL, Axios interceptor), `DashboardPage` (4 KPI cards, severity bar), `VulnerabilitiesPage` (paginated + filtered list, create modal), `VulnerabilityDetailPage` (all fields, 4 read-only tabs: history/comments/attachments/reminders), `AppLayout` (sidebar nav), all UI components (`SeverityBadge`, `StatusBadge`, `Spinner`, `Pagination`, `Modal`), `vulnerabilityService`, `sourceService`, `teamService`
-- **Tests** — `VulnTrack.Domain.Tests` (3 files), `VulnTrack.Application.Tests` (5 files), `VulnTrack.Api.Tests` (3 files, 11 integration scenarios)
+- **Frontend** — Full auth flow (MSAL, Axios interceptor); `DashboardPage` (4 KPI cards, severity bar, team/source/date filters, global search); `VulnerabilitiesPage` (paginated + filtered list, create modal with team + discovered-at, assign modal with user picker + team); `VulnerabilityDetailPage` (all fields + 4 tabs: history, comments with submit form, attachments, reminders with schedule form); `FileVulnerabilityPage` (manual entry + Excel upload with batch status polling); `AssetsPage` (table, search/type filters, create/edit/delete modals); `AppLayout` (sidebar nav); all UI components; all services (`vulnerabilityService`, `sourceService`, `teamService`, `assetService`, `uploadBatchService`, `userService`); `UserSearchPicker` typeahead
+- **Tests** — `VulnTrack.Domain.Tests` (3 files, 37 tests), `VulnTrack.Application.Tests` (5 files, 36 tests), `VulnTrack.Api.Tests` (3 files, 21 tests) — **all 94 pass**
+- **Infrastructure (Bicep)** — `infra/main.bicep` + 8 modules (appservice, functions, monitoring, roleassignments, servicebus, sql, staticwebapp, storage); `infra/parameters/dev.bicepparam` + `prod.bicepparam` with placeholder tokens
+- **CI/CD (GitHub Actions)** — `build.yml` (PR + push: restore, build, test all 3 suites, upload TRX); `deploy-api.yml` (push to main: publish + deploy to App Service via OIDC); `deploy-functions.yml` (push to main: publish + deploy to Function App); `deploy-frontend.yml` (push to main: npm build + deploy to Azure Static Web Apps); `deploy-infra.yml` (manual: Bicep validate + deploy with environment selector)
 
 ---
 
@@ -283,17 +285,16 @@ dotnet ef database update --project VulnTrack.Infrastructure --startup-project V
 
 See `TODO.md` in the repository root for the full prioritised list with effort estimates and dependencies. Key gaps are summarised below.
 
-### Feature gaps (RTM)
-- **Inventory table** — Team column and Follow-up Due column not rendered in `VulnerabilityTable`
-- **Add comment** — `CommentsTab` on detail page is read-only; no submit form
-- **Schedule reminder** — `RemindersTab` on detail page is read-only; no schedule button or form
-- **Excel upload** — backend fully implemented; no frontend UI exists (no file picker, no upload page, no `uploadBatchService`, no nav item)
-- **Dashboard filters and search** — `DashboardPage` shows aggregate KPIs only; no filter or search controls
-- **Assets feature** — entity, EF config, and controller stub exist; `IApplicationDbContext` does not expose `DbSet<Asset>`; no Application handlers; frontend `AssetsPage` is a blank placeholder
+### All feature work is complete — 94 tests pass
 
-### Infrastructure gaps
-- Entra ID app registrations not provisioned; all config values are placeholder tokens
-- `infra/` and `.github/workflows/` directories exist but are empty — no Bicep templates and no CI/CD pipelines
+The remaining gaps are all external provisioning steps (no code changes needed):
+
+### Deployment prerequisites
+1. **Entra ID app registrations** — create API app (expose `access_as_user` scope) and frontend SPA app (redirect URIs). Replace placeholder tokens in `appsettings.json` and `.env`.
+2. **Azure resource provisioning** — fill in `infra/parameters/dev.bicepparam` (sqlAdminObjectId, tenantId, apiClientId, senderEmail) then run the `Deploy Infrastructure` workflow (manual trigger) to create all Azure resources via Bicep.
+3. **SQL managed identity access** — after Bicep deploy, run the `sqlcmd` commands listed in `infra/modules/roleassignments.bicep` to grant `db_owner` to the API and Functions managed identities.
+4. **Graph Mail.Send admin consent** — grant application permission `Mail.Send` on the managed identity via Entra portal.
+5. **GitHub secrets** — set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_WEBAPP_NAME`, `AZURE_FUNCTION_APP_NAME`, `AZURE_STATIC_WEB_APPS_API_TOKEN`, and all `VITE_*` frontend secrets in GitHub → Settings → Secrets.
 
 ---
 

@@ -114,6 +114,14 @@ if (!builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// ── Apply pending EF migrations on startup ───────────────────────────────
+if (!app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<VulnTrack.Infrastructure.Data.ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -135,7 +143,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-app.Run();
+await app.RunAsync();
 
 // Exposed for integration tests
 public partial class Program { }

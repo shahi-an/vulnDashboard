@@ -1,0 +1,67 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend — Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore VulnTrack.sln
+
+      - name: Build
+        run: dotnet build VulnTrack.sln --no-restore --configuration Release
+
+      - name: Test
+        run: >
+          dotnet test VulnTrack.sln
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --logger "trx;LogFileName=results.trx"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+
+  frontend:
+    name: Frontend — Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: src/frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: src/frontend
+        env:
+          # Placeholder values satisfy Vite's import.meta.env at build time.
+          VITE_AZURE_CLIENT_ID: '00000000-0000-0000-0000-000000000000'
+          VITE_AZURE_TENANT_ID: '00000000-0000-0000-0000-000000000000'
+          VITE_AZURE_REDIRECT_URI: 'https://placeholder.example.com'
+          VITE_API_BASE_URL: 'https://placeholder.example.com'
+          VITE_API_SCOPE: 'api://00000000-0000-0000-0000-000000000000/access_as_user'

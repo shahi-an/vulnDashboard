@@ -1,0 +1,60 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write   # required for OIDC token exchange
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Bicep — ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create resource group
+        run: |
+          az group create \
+            --name rg-vulntrack-${{ inputs.environment }} \
+            --location eastus2 \
+            --tags environment=${{ inputs.environment }} project=vulntrack
+
+      - name: Validate Bicep
+        run: |
+          az deployment group validate \
+            --resource-group rg-vulntrack-${{ inputs.environment }} \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/${{ inputs.environment }}.bicepparam
+
+      - name: Deploy Bicep
+        run: |
+          az deployment group create \
+            --resource-group rg-vulntrack-${{ inputs.environment }} \
+            --template-file infra/main.bicep \
+            --parameters infra/parameters/${{ inputs.environment }}.bicepparam \
+            --name "vulntrack-$(date -u +%Y%m%dT%H%M%SZ)" \
+            --output json | tee deployment-output.json
+
+      - name: Show deployment outputs
+        run: |
+          echo "## Deployment outputs" >> $GITHUB_STEP_SUMMARY
+          jq -r '.properties.outputs | to_entries[] | "- **\(.key)**: \(.value.value)"' deployment-output.json >> $GITHUB_STEP_SUMMARY
