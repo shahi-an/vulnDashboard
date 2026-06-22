@@ -32,10 +32,11 @@ export function UserSearchPicker({
     setInputText(value ? (value.displayName ?? value.email) : '');
   }, [value]);
 
-  const { data: suggestions = [] } = useQuery({
+  const { data: suggestions = [], isError: searchError } = useQuery({
     queryKey: ['users', 'search', debouncedQuery],
     queryFn: () => userService.search(debouncedQuery),
     enabled: debouncedQuery.length >= 2,
+    retry: false,
   });
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +81,7 @@ export function UserSearchPicker({
   };
 
   const showDropdown = open && suggestions.length > 0;
+  const showSearchError = searchError && debouncedQuery.length >= 2 && !value;
 
   return (
     <div className={`relative ${className}`}>
@@ -124,6 +126,11 @@ export function UserSearchPicker({
             </button>
           ))}
         </div>
+      )}
+      {showSearchError && (
+        <p className="mt-1 text-xs text-amber-600">
+          Entra search unavailable — type the email address directly instead.
+        </p>
       )}
     </div>
   );
