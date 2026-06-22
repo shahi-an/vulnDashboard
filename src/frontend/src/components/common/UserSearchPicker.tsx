@@ -11,6 +11,7 @@ export interface PickedUser {
 interface UserSearchPickerProps {
   value: PickedUser | null;
   onChange: (user: PickedUser | null) => void;
+  onInputChange?: (text: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -18,6 +19,7 @@ interface UserSearchPickerProps {
 export function UserSearchPicker({
   value,
   onChange,
+  onInputChange,
   placeholder = 'Search by name or email…',
   className = '',
 }: UserSearchPickerProps) {
@@ -40,6 +42,7 @@ export function UserSearchPicker({
     const text = e.target.value;
     setInputText(text);
     onChange(null);
+    onInputChange?.(text);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedQuery(text);
@@ -54,6 +57,7 @@ export function UserSearchPicker({
       displayName: u.displayName,
     };
     onChange(picked);
+    onInputChange?.('');
     setInputText(u.displayName ?? u.email ?? '');
     setDebouncedQuery('');
     setOpen(false);
@@ -70,6 +74,7 @@ export function UserSearchPicker({
 
   const handleClear = () => {
     onChange(null);
+    onInputChange?.('');
     setInputText('');
     setDebouncedQuery('');
   };
